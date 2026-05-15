@@ -8,7 +8,7 @@ plugins {
     id("maven-publish")
 }
 
-group = "com.github.dongb2002"
+group = "com.github.dbv0610"
 version = System.getenv("VERSION") ?: "1.0.0"
 
 kotlin {
@@ -67,7 +67,7 @@ publishing {
         pom {
             name.set("SDP SSP Compose Multiplatform")
             description.set("Scalable DP and SP size units for Compose Multiplatform (Android, iOS, Desktop, Wasm)")
-            url.set("https://github.com/dongb2002/sdp-ssp-library")
+            url.set("https://github.com/dbv0610/sdp-ssp-compose")
         }
     }
 }

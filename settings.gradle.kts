@@ -1,4 +1,4 @@
-rootProject.name = "sdp-ssp-library"
+rootProject.name = "sdp-ssp-compose"
 
 pluginManagement {
     repositories {
