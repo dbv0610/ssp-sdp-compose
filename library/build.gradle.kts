@@ -52,7 +52,7 @@ kotlin {
 
 android {
     namespace = "com.github.dongb2002.sdpssp"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         minSdk = 24
     }
