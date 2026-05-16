@@ -34,12 +34,12 @@ dependencyResolutionManagement {
 **Compose Multiplatform** (Android · iOS · JVM · Wasm):
 ```kotlin
 // build.gradle.kts
-implementation("com.sdp.ssp:kmp:<version>")
+implementation("com.github.dbv0610.ssp-sdp-compose:android:kmp:<version>")
 ```
 
 **Android only:**
 ```kotlin
-implementation("com.sdp.ssp:android:<version>")
+implementation("com.github.dbv0610.ssp-sdp-compose:android:<version>")
 ```
 
 > Replace `<version>` with the latest release tag from the [releases page](https://github.com/dbv0610/sdp-ssp-compose/releases).
