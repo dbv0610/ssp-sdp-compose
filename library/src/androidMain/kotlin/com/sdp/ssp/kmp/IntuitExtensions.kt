@@ -1,8 +1,10 @@
 package com.sdp.ssp.kmp
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -13,9 +15,9 @@ import com.intuit.sdp.R
 val Int.Sdp: Dp
     @Composable get() {
         val resId = when {
-            this in 1..600   -> sdpPos[this - 1]
-            this in -60..-1  -> sdpNeg[-this - 1]
-            else             -> return this.dp
+            this in 1..600 -> sdpPos[this - 1]
+            this in -60..-1 -> sdpNeg[-this - 1]
+            else -> return this.dp
         }
         return dimensionResource(resId)
     }
@@ -24,18 +26,30 @@ private const val SSP_BASE_DP = 360f
 
 val Int.Ssp: TextUnit
     @Composable get() {
-        val config = LocalConfiguration.current
-        val minScreenDp = minOf(config.screenWidthDp, config.screenHeightDp)
-        return (this * minScreenDp / SSP_BASE_DP).sp
+        val resId = when {
+            this in 1..600 -> sdpPos[this - 1]
+            else -> return this.sp
+        }
+        return with(LocalDensity.current) { dimensionResource(resId).toSp() }
     }
+
+val Int.RSsp: TextUnit
+    @Composable get() {
+        val resId = when {
+            this in 1..600 -> sspPos[this - 1]
+            else -> return this.sp
+        }
+        return with(LocalDensity.current) { dimensionResource(resId).toSp() }
+    }
+
 
 // ── Non-Composable versions ──────────────────────────────────────────────────
 
 fun Int.getSdp(context: Context): Float {
     val resId = when {
-        this in 1..600  -> sdpPos[this - 1]
+        this in 1..600 -> sdpPos[this - 1]
         this in -60..-1 -> sdpNeg[-this - 1]
-        else            -> return this.toFloat()
+        else -> return this.toFloat()
     }
     return context.resources.getDimension(resId) / context.resources.displayMetrics.density
 }
@@ -43,7 +57,7 @@ fun Int.getSdp(context: Context): Float {
 fun Int.getSsp(context: Context): Float {
     val resId = when {
         this in 1..100 -> sspPos[this - 1]
-        else           -> return this.toFloat()
+        else -> return this.toFloat()
     }
     return context.resources.getDimension(resId) / context.resources.displayMetrics.scaledDensity
 }
