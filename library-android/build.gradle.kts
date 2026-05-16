@@ -7,7 +7,7 @@ plugins {
     id("maven-publish")
 }
 
-group = "com.github.dbv0610"
+group = "com.ssp.sdp"
 version = System.getenv("VERSION") ?: "1.0.0"
 
 kotlin {
@@ -17,7 +17,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.github.dongb2002.sdpssp"
+    namespace = "com.sdp.ssp.android"
     compileSdk = 36
     defaultConfig {
         minSdk = 24
@@ -46,7 +46,7 @@ afterEvaluate {
         publications {
             create<MavenPublication>("release") {
                 from(components["release"])
-                groupId = "com.github.dbv0610"
+                groupId = "com.ssp.sdp"
                 artifactId = "sdp-ssp-android"
                 pom {
                     name.set("SDP SSP Android")

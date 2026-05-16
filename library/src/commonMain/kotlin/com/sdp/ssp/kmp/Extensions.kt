@@ -1,11 +1,10 @@
-package com.github.dongb2002.sdpssp
+package com.sdp.ssp.kmp
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 val Int.sdp: Dp @Composable get() = scaledSdp()
 val Float.sdp: Dp @Composable get() = scaledSdp()
@@ -23,11 +22,9 @@ private fun <T : Number> T.scaledSdp(): Dp {
 
 @Composable
 private fun <T : Number> T.scaledSsp(): TextUnit {
-    val density = LocalDensity.current
-    return scaledSdp().toSp(density)
+    val minValue = minOf(getScreenWidth(), getScreenHeight()) / SDPConfig.getScalingRatio()
+    return (toDouble() * minValue).toFloat().sp
 }
-
-private fun Dp.toSp(density: Density): TextUnit = with(density) { toSp() }
 
 @Composable
 internal expect fun getScreenWidth(): Float

@@ -1,7 +1,6 @@
-package com.github.dongb2002.sdpssp
+package com.sdp.ssp.android
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.util.DisplayMetrics

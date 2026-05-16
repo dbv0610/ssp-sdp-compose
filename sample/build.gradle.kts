@@ -7,10 +7,10 @@ plugins {
 }
 
 android {
-    namespace = "com.github.dongb2002.sdpssp.sample"
+    namespace = "com.ssp.kmp.sample"
     compileSdk = 35
     defaultConfig {
-        applicationId = "com.github.dongb2002.sdpssp.sample"
+        applicationId = "com.ssp.sdp.sample"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

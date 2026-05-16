@@ -1,4 +1,4 @@
-package com.github.dongb2002.sdpssp.sample
+package com.ssp.kmp.sample
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -27,11 +27,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.github.dongb2002.sdpssp.SDPConfig
-import com.github.dongb2002.sdpssp.Sdp
-import com.github.dongb2002.sdpssp.Ssp
-import com.github.dongb2002.sdpssp.sdp
-import com.github.dongb2002.sdpssp.ssp
+import com.sdp.ssp.kmp.SDPConfig
+import com.sdp.ssp.kmp.Sdp
+import com.sdp.ssp.kmp.Ssp
+import com.sdp.ssp.kmp.sdp
+import com.sdp.ssp.kmp.ssp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

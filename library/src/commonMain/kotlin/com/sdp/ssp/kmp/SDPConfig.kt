@@ -1,4 +1,4 @@
-package com.github.dongb2002.sdpssp
+package com.sdp.ssp.kmp
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf

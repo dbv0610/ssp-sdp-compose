@@ -4,7 +4,7 @@
         android:label="SDP/SSP Sample"
         android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
         <activity
-            android:name=".MainActivity"
+            android:name="com.ssp.kmp.sample.MainActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
