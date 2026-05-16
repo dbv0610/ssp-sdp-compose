@@ -1,13 +1,15 @@
 # SDP SSP — Scalable Size Units for Compose
 
-A Kotlin library that provides screen-size-aware `dp` and `sp` units for Jetpack Compose and Compose Multiplatform. Text and layout sizes scale continuously with the device's actual screen size, so UI looks consistent across phones, tablets, and desktops without breakpoint hacks.
+Screen-size-aware `dp` and `sp` units for Jetpack Compose and Compose Multiplatform. Sizes scale continuously with the device's actual screen dimensions so your UI looks consistent across phones, tablets, and desktops.
+
+---
 
 ## Modules
 
-| Module | Targets | Import |
+| Module | Artifact | Targets |
 |---|---|---|
-| `library` | Android, iOS, JVM, WasmJs | `com.ssp.sdp:library` |
-| `library-android` | Android only | `com.ssp.sdp:sdp-ssp-android` |
+| `library` | `com.ssp.sdp.kmp:library` | Android · iOS · JVM · WasmJs |
+| `library-android` | `com.ssp.sdp.android:sdp-ssp-android` | Android only |
 
 ---
 
@@ -28,66 +30,73 @@ dependencyResolutionManagement {
 
 ### 2. Add dependency
 
-**Compose Multiplatform (Android · iOS · JVM · Wasm):**
+**Compose Multiplatform** (Android, iOS, JVM, Wasm):
 ```kotlin
 // build.gradle.kts
-implementation("com.ssp.sdp:library:<version>")
+implementation("com.ssp.sdp.kmp:library:<version>")
 ```
 
 **Android only:**
 ```kotlin
-implementation("com.ssp.sdp:sdp-ssp-android:<version>")
+implementation("com.ssp.sdp.android:sdp-ssp-android:<version>")
 ```
 
-> Replace `<version>` with the latest release tag from the repository.
+> Find the latest `<version>` tag on the [releases page](https://github.com/dbv0610/sdp-ssp-compose/releases).
 
 ---
 
-## Usage
+## Usage — Compose Multiplatform (`library`)
 
-### Compose Multiplatform (`library`)
+Import from `com.sdp.ssp.kmp`.
+
+### Initialize (once at app start)
+
+```kotlin
+// Activity.onCreate or Application.onCreate
+SDPConfig.setScalingRatio(360.0) // baseline screen width in dp (default: 360)
+```
+
+### Composable extensions
 
 ```kotlin
 import com.sdp.ssp.kmp.SDPConfig
-import com.sdp.ssp.kmp.sdp
-import com.sdp.ssp.kmp.ssp
-
-// Set baseline screen width once at app start (default is 360)
-SDPConfig.setScalingRatio(360.0)
+import com.sdp.ssp.kmp.sdp   // layout sizes
+import com.sdp.ssp.kmp.ssp   // text sizes
+// Also available on Android target:
+import com.sdp.ssp.kmp.Sdp   // Intuit-resource-backed layout dp
+import com.sdp.ssp.kmp.Ssp   // continuous-scaling text sp
 
 @Composable
 fun MyScreen() {
-    Box(
+    Column(
         modifier = Modifier
-            .size(120.sdp)          // scales with screen size
+            .fillMaxSize()
             .padding(16.sdp)
     ) {
-        Text(
-            text = "Hello",
-            fontSize = 14.ssp       // scales with screen size + respects font accessibility setting
-        )
+        Box(modifier = Modifier.size(120.sdp, 48.sdp)) {
+            Text(
+                text = "Hello",
+                fontSize = 14.ssp
+            )
+        }
     }
 }
 ```
 
-Also works with `Float` and `Double`:
-```kotlin
-12.5f.sdp
-0.5.sdp
-```
+| Extension | Receiver types | Returns | Description |
+|---|---|---|---|
+| `.sdp` | `Int`, `Float`, `Double` | `Dp` | Layout size scaled to screen |
+| `.ssp` | `Int`, `Float`, `Double` | `TextUnit` | Text size scaled to screen, respects font accessibility |
+| `.Sdp` *(Android)* | `Int` | `Dp` | Layout size via Intuit SDP resources |
+| `.Ssp` *(Android)* | `Int` | `TextUnit` | Text size, continuously scaled |
 
 ---
 
-### Android only (`library-android`)
+## Usage — Android only (`library-android`)
 
-Provides two extension sets:
+Import from `com.sdp.ssp.android`.
 
-| Extension | Type | Description |
-|---|---|---|
-| `Int.Sdp` | `Dp` | Layout size scaled by screen width via Intuit SDP resources |
-| `Int.Ssp` | `TextUnit` | Text size scaled continuously by screen width |
-| `Int.getSdp(context)` | `Float` | Non-composable layout size |
-| `Int.getSsp(context)` | `Float` | Non-composable text size |
+### Composable extensions
 
 ```kotlin
 import com.sdp.ssp.android.Sdp
@@ -97,7 +106,7 @@ import com.sdp.ssp.android.Ssp
 fun MyScreen() {
     Box(
         modifier = Modifier
-            .size(120.Sdp)
+            .size(120.Sdp, 48.Sdp)
             .padding(16.Sdp)
     ) {
         Text(
@@ -108,51 +117,82 @@ fun MyScreen() {
 }
 ```
 
+### Non-Composable extensions
+
+For use outside Compose (e.g. View-based UI or ViewModel):
+
+```kotlin
+import com.sdp.ssp.android.getSdp
+import com.sdp.ssp.android.getSsp
+
+val widthPx = 120.getSdp(context)   // Float, dp value
+val textPx  = 14.getSsp(context)    // Float, sp value
+```
+
+### Screen utility functions
+
+```kotlin
+import com.sdp.ssp.android.*
+
+// Composable
+val widthDp   = getScreenWidthInDp()       // Dp
+val heightDp  = getScreenHeightInDp()      // Dp
+val widthPx   = getScreenWidthInPx()       // Int
+val heightPx  = getScreenHeightInPx()      // Int
+val sizePx    = getScreenSize()            // android.util.Size (px)
+
+// Conversions
+val px   = 16.dp.toPx()                   // Float
+val dp1  = 48.pxToDp()                    // Dp  (Int receiver)
+val dp2  = 48f.pxToDp()                   // Dp  (Float receiver)
+
+// Non-Composable
+val inches = getScreenSizeInInches(context)    // Double (diagonal)
+val statusBar = context.statusBarHeight        // Int (px)
+val navBar    = context.navigationBarHeight    // Int (px)
+```
+
 ---
 
-## How it works
+## How scaling works
 
-### `sdp` / `Sdp` — Scalable DP
-
-Layout sizes are scaled proportionally to the device's smallest screen dimension relative to a 360 dp baseline:
+### `sdp` / `Sdp` — layout
 
 ```
-result_dp = value × (min(screenWidth, screenHeight) / scalingRatio)
+result = value × min(screenWidthDp, screenHeightDp) / scalingRatio
 ```
 
-A box of `120.sdp` on a 360 dp screen = 120 dp.  
-On a 480 dp screen = 160 dp — proportionally larger, so layout fills the same visual fraction.
+`120.sdp` on a 360 dp screen → 120 dp.
+`120.sdp` on a 480 dp screen → 160 dp (proportionally larger).
 
-### `ssp` / `Ssp` — Scalable SP
+### `ssp` / `Ssp` — text
 
-Text sizes follow the same proportional formula but are returned as `sp` units, so the system's accessibility font-scale setting is still respected on top of the screen-size scaling:
+Same formula, returned as `sp` so the Android system's accessibility font-scale setting is applied on top:
 
 ```
-result_sp = value × (min(screenWidth, screenHeight) / scalingRatio)
+result = value × min(screenWidthDp, screenHeightDp) / scalingRatio   (in sp)
 ```
-
-Because the result is a real `sp` value (not a dp-to-sp conversion), users who increase font size in accessibility settings will see text grow as expected.
 
 ---
 
 ## Configuration
 
 ```kotlin
-// Call once before your first Composable, e.g. in Application.onCreate or Activity.onCreate
-SDPConfig.setScalingRatio(360.0)  // baseline screen width in dp (default: 360)
+SDPConfig.setScalingRatio(360.0)
 ```
 
-Increase the ratio to make all sizes smaller relative to the screen; decrease it to make them larger.
+The ratio is the reference screen width in dp your design was made for (default `360`). Raise it to shrink all sizes; lower it to grow them.
 
 ---
 
 ## Platform support
 
-| Platform | Supported |
-|---|---|
-| Android | ✓ |
-| iOS (arm64, simulatorArm64) | ✓ |
-| JVM Desktop | ✓ |
-| Wasm (browser) | ✓ |
+| Platform | `library` (KMP) | `library-android` |
+|---|---|---|
+| Android | ✓ | ✓ |
+| iOS arm64 | ✓ | — |
+| iOS Simulator arm64 | ✓ | — |
+| JVM Desktop | ✓ | — |
+| Wasm (browser) | ✓ | — |
 
-Minimum Android SDK: **24**
+**Minimum Android SDK:** 24
