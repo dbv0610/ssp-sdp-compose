@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +9,12 @@ plugins {
 group = "com.github.dbv0610"
 version = System.getenv("VERSION") ?: "1.0.0"
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
 android {
     namespace = "com.github.dongb2002.sdpssp"
     compileSdk = 36
@@ -14,11 +22,8 @@ android {
         minSdk = 24
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = "1.8"
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     publishing {
         singleVariant("release") {
@@ -32,6 +37,7 @@ dependencies {
     implementation("com.intuit.ssp:ssp-android:1.1.1")
     implementation(libs.androidx.compose.ui)
     implementation("androidx.compose.runtime:runtime:1.7.0")
+    implementation(libs.androidx.window)
 }
 
 afterEvaluate {
