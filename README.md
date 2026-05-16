@@ -8,8 +8,8 @@ Screen-size-aware `dp` and `sp` units for Jetpack Compose and Compose Multiplatf
 
 | Module | Artifact | Targets |
 |---|---|---|
-| `library` | `com.ssp.sdp.kmp:library` | Android · iOS · JVM · WasmJs |
-| `library-android` | `com.ssp.sdp.android:sdp-ssp-android` | Android only |
+| `library` | `com.sdp.ssp:kmp` | Android · iOS · JVM · WasmJs |
+| `library-android` | `com.sdp.ssp:android` | Android only |
 
 ---
 
@@ -33,12 +33,12 @@ dependencyResolutionManagement {
 **Compose Multiplatform** (Android, iOS, JVM, Wasm):
 ```kotlin
 // build.gradle.kts
-implementation("com.ssp.sdp.kmp:library:<version>")
+implementation("com.sdp.ssp:kmp:<version>")
 ```
 
 **Android only:**
 ```kotlin
-implementation("com.ssp.sdp.android:sdp-ssp-android:<version>")
+implementation("com.sdp.ssp:android:<version>")
 ```
 
 > Find the latest `<version>` tag on the [releases page](https://github.com/dbv0610/sdp-ssp-compose/releases).

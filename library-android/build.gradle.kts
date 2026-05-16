@@ -7,7 +7,7 @@ plugins {
     id("maven-publish")
 }
 
-group = "com.ssp.sdp"
+group = "com.sdp.ssp"
 version = System.getenv("VERSION") ?: "1.0.0"
 
 kotlin {
@@ -46,8 +46,8 @@ afterEvaluate {
         publications {
             create<MavenPublication>("release") {
                 from(components["release"])
-                groupId = "com.ssp.sdp"
-                artifactId = "sdp-ssp-android"
+                groupId = "com.sdp.ssp"
+                artifactId = "android"
                 pom {
                     name.set("SDP SSP Android")
                     description.set("Scalable DP and SP size units for Android Compose")

@@ -8,7 +8,7 @@ plugins {
     id("maven-publish")
 }
 
-group = "com.ssp.sdp"
+group = "com.sdp.ssp"
 version = System.getenv("VERSION") ?: "1.0.0"
 
 kotlin {
@@ -64,6 +64,7 @@ android {
 
 publishing {
     publications.withType<MavenPublication> {
+        artifactId = artifactId.replace("library", "kmp")
         pom {
             name.set("SDP SSP Compose Multiplatform")
             description.set("Scalable DP and SP size units for Compose Multiplatform (Android, iOS, Desktop, Wasm)")
