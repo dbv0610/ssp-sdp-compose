@@ -1,0 +1,30 @@
+<idea-plugin>
+    <id>com.sdp.ssp.inlay-hints</id>
+    <name>SDP SSP Value Hints</name>
+    <vendor>sdp-ssp-compose</vendor>
+    <description><![CDATA[
+        Shows the computed dp/sp value inline next to sdp/ssp extension usages,
+        e.g. <code>12.Sdp</code> is rendered as <code>12.Sdp = 14.4dp</code>.
+        The device width used for the computation is configurable in
+        Settings | Tools | SDP/SSP Hints (default 360dp).
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.kotlin</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <codeInsight.declarativeInlayProvider
+            language="kotlin"
+            implementationClass="com.sdp.ssp.inlay.SdpInlayHintsProvider"
+            isEnabledByDefault="true"
+            group="VALUES_GROUP"
+            providerId="sdp.ssp.value.hints"
+            bundle="messages.SdpBundle"
+            nameKey="hints.provider.name"/>
+        <applicationConfigurable
+            parentId="tools"
+            instance="com.sdp.ssp.inlay.SdpSettingsConfigurable"
+            id="com.sdp.ssp.inlay.settings"
+            displayName="SDP/SSP Hints"/>
+    </extensions>
+</idea-plugin>
