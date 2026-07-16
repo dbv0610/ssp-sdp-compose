@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.sdp.ssp"
-version = System.getenv("VERSION") ?: "1.1.0"
+version = System.getenv("VERSION") ?: "1.2.0"
 
 kotlin {
     androidTarget {
@@ -42,6 +42,10 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.ui)
             implementation(compose.foundation)
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.window)
         }
     }
 }

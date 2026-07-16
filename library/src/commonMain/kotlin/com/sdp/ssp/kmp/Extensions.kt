@@ -16,18 +16,20 @@ val Double.ssp: TextUnit @Composable get() = scaledSsp()
 
 @Composable
 private fun <T : Number> T.scaledSdp(): Dp {
-    val minValue = minOf(getScreenWidth(), getScreenHeight()) / SDPConfig.getScalingRatio()
+    val minValue = minOf(platformScreenWidth(), platformScreenHeight()) / SDPConfig.getScalingRatio()
     return (toDouble() * minValue).dp
 }
 
 @Composable
 private fun <T : Number> T.scaledSsp(): TextUnit {
-    val minValue = minOf(getScreenWidth(), getScreenHeight()) / SDPConfig.getScalingRatio()
+    val minValue = minOf(platformScreenWidth(), platformScreenHeight()) / SDPConfig.getScalingRatio()
     return (toDouble() * minValue).toFloat().sp
 }
 
+/** Width of the screen (Android) or window (other platforms) in dp. */
 @Composable
-internal expect fun getScreenWidth(): Float
+internal expect fun platformScreenWidth(): Float
 
+/** Height of the screen (Android) or window (other platforms) in dp. */
 @Composable
-internal expect fun getScreenHeight(): Float
+internal expect fun platformScreenHeight(): Float
