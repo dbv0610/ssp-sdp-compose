@@ -84,7 +84,7 @@ fun MyScreen() {
 }
 ```
 
-Also available on the **Android target only** (backed by Intuit SDP/SSP resources):
+Also available on the **Android target only** (backed by explicit per-screen-width dimen resources bundled in the library — no external dependency):
 
 ```kotlin
 import com.sdp.ssp.kmp.Sdp  // layout  (Int only)
@@ -101,7 +101,7 @@ Box(modifier = Modifier.size(120.Sdp, 48.Sdp)) {
 |---|---|---|---|
 | `.sdp` | `Int`, `Float`, `Double` | `Dp` | Layout size, scales with screen |
 | `.ssp` | `Int`, `Float`, `Double` | `TextUnit` | Text size, scales with screen + font accessibility |
-| `.Sdp` | `Int` | `Dp` | Android only — Intuit SDP resource buckets |
+| `.Sdp` | `Int` | `Dp` | Android only — bundled sdp resource buckets |
 | `.Ssp` | `Int` | `TextUnit` | Android only — continuous screen scaling |
 
 ---
@@ -194,6 +194,26 @@ SDPConfig.setScalingRatio(360.0)
 ```
 
 Set this to the screen width in dp that your design was created for. The default is `360`. Increase to shrink all sizes; decrease to grow them.
+
+---
+
+## IDE plugin — inline computed values
+
+The repo ships an IntelliJ/Android Studio plugin (`idea-plugin/`) that renders the
+computed value right at the call site as an inlay hint:
+
+```kotlin
+Modifier.paddingBottom(12.Sdp)   // shown in the editor as: 12.Sdp = 14.4dp
+Text("Hi", fontSize = 14.ssp)    // shown in the editor as: 14.ssp = 14sp
+```
+
+Build and install:
+
+1. `./gradlew -p idea-plugin buildPlugin`
+2. In Android Studio: **Settings | Plugins | ⚙ | Install Plugin from Disk…** and pick
+   `idea-plugin/build/distributions/sdp-ssp-inlay-hints-1.0.0.zip`
+3. The device width used for the computation defaults to **360dp**; change it in
+   **Settings | Tools | SDP/SSP Hints** to see the values for your device.
 
 ---
 

@@ -1,22 +1,44 @@
 package com.sdp.ssp.kmp
 
-import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.intuit.sdp.R
+import com.ssp.kmp.R
 
+/**
+ * **Scalable dp** — a [Dp] that scales with the device's smallest screen width.
+ *
+ * Actual size ≈ `value × smallestScreenWidth / 300` dp:
+ *
+ * | Smallest width          | Scale | Example: `12.Sdp` |
+ * |-------------------------|-------|-------------------|
+ * | 300dp (small phone)     | ×1.0  | 12.0dp            |
+ * | 360dp (typical phone)   | ×1.2  | 14.4dp            |
+ * | 390dp (large phone)     | ×1.3  | 15.6dp            |
+ * | 480dp (small tablet)    | ×1.6  | 19.2dp            |
+ * | 600dp (7" tablet)       | ×2.0  | 24.0dp            |
+ *
+ * Supported range: `1..600` and `-60..-1`. Values outside this range fall back
+ * to plain [dp] with no scaling.
+ *
+ * @see Ssp for text sizes
+ * @see getSdp for a non-composable version
+ */
+@get:Stable
 val Int.Sdp: Dp
-    @Composable get() {
-        val resId = when {
-            this in 1..600 -> sdpPos[this - 1]
-            this in -60..-1 -> sdpNeg[-this - 1]
+    @Composable
+    @ReadOnlyComposable
+    get() {
+        val resId = when (this) {
+            in 1..600 -> sdpPos[this - 1]
+            in -60..-1 -> sdpNeg[-this - 1]
             else -> return this.dp
         }
         return dimensionResource(resId)
@@ -24,8 +46,30 @@ val Int.Sdp: Dp
 
 private const val SSP_BASE_DP = 360f
 
+/**
+ * **Scalable sp** — a text size [TextUnit] that scales with the device's smallest
+ * screen width but **ignores the user's system font-size setting**.
+ *
+ * Actual size ≈ `value × smallestScreenWidth / 300` sp:
+ *
+ * | Smallest width          | Scale | Example: `12.Ssp` |
+ * |-------------------------|-------|-------------------|
+ * | 300dp (small phone)     | ×1.0  | 12.0sp            |
+ * | 360dp (typical phone)   | ×1.2  | 14.4sp            |
+ * | 390dp (large phone)     | ×1.3  | 15.6sp            |
+ * | 480dp (small tablet)    | ×1.6  | 19.2sp            |
+ * | 600dp (7" tablet)       | ×2.0  | 24.0sp            |
+ *
+ * Supported range: `1..600`. Values outside this range fall back to plain [sp]
+ * with no scaling.
+ *
+ * @see RSsp if the text should also respect the user's font-size (accessibility) setting
+ */
+@get:Stable
 val Int.Ssp: TextUnit
-    @Composable get() {
+    @Composable
+    @ReadOnlyComposable
+    get() {
         val resId = when {
             this in 1..600 -> sdpPos[this - 1]
             else -> return this.sp
@@ -33,10 +77,23 @@ val Int.Ssp: TextUnit
         return with(LocalDensity.current) { dimensionResource(resId).toSp() }
     }
 
+/**
+ * **Respectful scalable sp** — like [Ssp], scales with the device's smallest screen
+ * width, but **also respects the user's system font-size (accessibility) setting**.
+ *
+ * Base size ≈ `value × smallestScreenWidth / 300` sp, then multiplied by the user's
+ * font scale (e.g. `12.RSsp` on a 360dp-wide phone ≈ 14.4sp × font scale).
+ *
+ * Supported range: `1..100`. Values outside this range fall back to plain [sp]
+ * with no scaling.
+ */
+@get:Stable
 val Int.RSsp: TextUnit
-    @Composable get() {
+    @Composable
+    @ReadOnlyComposable
+    get() {
         val resId = when {
-            this in 1..600 -> sspPos[this - 1]
+            this in 1..100 -> sspPos[this - 1]
             else -> return this.sp
         }
         return with(LocalDensity.current) { dimensionResource(resId).toSp() }
@@ -45,15 +102,29 @@ val Int.RSsp: TextUnit
 
 // ── Non-Composable versions ──────────────────────────────────────────────────
 
+/**
+ * Non-composable version of [Sdp]: returns the scaled size **in dp** as a [Float].
+ *
+ * Actual size ≈ `value × smallestScreenWidth / 300` dp (e.g. `12.getSdp(ctx)` on a
+ * 360dp-wide phone returns `14.4`). Supported range: `1..600` and `-60..-1`;
+ * other values are returned unscaled.
+ */
 fun Int.getSdp(context: Context): Float {
-    val resId = when {
-        this in 1..600 -> sdpPos[this - 1]
-        this in -60..-1 -> sdpNeg[-this - 1]
+    val resId = when (this) {
+        in 1..600 -> sdpPos[this - 1]
+        in -60..-1 -> sdpNeg[-this - 1]
         else -> return this.toFloat()
     }
     return context.resources.getDimension(resId) / context.resources.displayMetrics.density
 }
 
+/**
+ * Non-composable version of [RSsp]: returns the scaled text size **in sp** as a [Float].
+ *
+ * Actual size ≈ `value × smallestScreenWidth / 300` sp (e.g. `12.getSsp(ctx)` on a
+ * 360dp-wide phone returns `14.4`). Supported range: `1..100`; other values are
+ * returned unscaled.
+ */
 fun Int.getSsp(context: Context): Float {
     val resId = when {
         this in 1..100 -> sspPos[this - 1]
@@ -732,105 +803,105 @@ private val sdpNeg = intArrayOf(
 
 // ── SSP positive 1–100 ──────────────────────────────────────────────────────
 private val sspPos = intArrayOf(
-    com.intuit.ssp.R.dimen._1ssp,
-    com.intuit.ssp.R.dimen._2ssp,
-    com.intuit.ssp.R.dimen._3ssp,
-    com.intuit.ssp.R.dimen._4ssp,
-    com.intuit.ssp.R.dimen._5ssp,
-    com.intuit.ssp.R.dimen._6ssp,
-    com.intuit.ssp.R.dimen._7ssp,
-    com.intuit.ssp.R.dimen._8ssp,
-    com.intuit.ssp.R.dimen._9ssp,
-    com.intuit.ssp.R.dimen._10ssp,
-    com.intuit.ssp.R.dimen._11ssp,
-    com.intuit.ssp.R.dimen._12ssp,
-    com.intuit.ssp.R.dimen._13ssp,
-    com.intuit.ssp.R.dimen._14ssp,
-    com.intuit.ssp.R.dimen._15ssp,
-    com.intuit.ssp.R.dimen._16ssp,
-    com.intuit.ssp.R.dimen._17ssp,
-    com.intuit.ssp.R.dimen._18ssp,
-    com.intuit.ssp.R.dimen._19ssp,
-    com.intuit.ssp.R.dimen._20ssp,
-    com.intuit.ssp.R.dimen._21ssp,
-    com.intuit.ssp.R.dimen._22ssp,
-    com.intuit.ssp.R.dimen._23ssp,
-    com.intuit.ssp.R.dimen._24ssp,
-    com.intuit.ssp.R.dimen._25ssp,
-    com.intuit.ssp.R.dimen._26ssp,
-    com.intuit.ssp.R.dimen._27ssp,
-    com.intuit.ssp.R.dimen._28ssp,
-    com.intuit.ssp.R.dimen._29ssp,
-    com.intuit.ssp.R.dimen._30ssp,
-    com.intuit.ssp.R.dimen._31ssp,
-    com.intuit.ssp.R.dimen._32ssp,
-    com.intuit.ssp.R.dimen._33ssp,
-    com.intuit.ssp.R.dimen._34ssp,
-    com.intuit.ssp.R.dimen._35ssp,
-    com.intuit.ssp.R.dimen._36ssp,
-    com.intuit.ssp.R.dimen._37ssp,
-    com.intuit.ssp.R.dimen._38ssp,
-    com.intuit.ssp.R.dimen._39ssp,
-    com.intuit.ssp.R.dimen._40ssp,
-    com.intuit.ssp.R.dimen._41ssp,
-    com.intuit.ssp.R.dimen._42ssp,
-    com.intuit.ssp.R.dimen._43ssp,
-    com.intuit.ssp.R.dimen._44ssp,
-    com.intuit.ssp.R.dimen._45ssp,
-    com.intuit.ssp.R.dimen._46ssp,
-    com.intuit.ssp.R.dimen._47ssp,
-    com.intuit.ssp.R.dimen._48ssp,
-    com.intuit.ssp.R.dimen._49ssp,
-    com.intuit.ssp.R.dimen._50ssp,
-    com.intuit.ssp.R.dimen._51ssp,
-    com.intuit.ssp.R.dimen._52ssp,
-    com.intuit.ssp.R.dimen._53ssp,
-    com.intuit.ssp.R.dimen._54ssp,
-    com.intuit.ssp.R.dimen._55ssp,
-    com.intuit.ssp.R.dimen._56ssp,
-    com.intuit.ssp.R.dimen._57ssp,
-    com.intuit.ssp.R.dimen._58ssp,
-    com.intuit.ssp.R.dimen._59ssp,
-    com.intuit.ssp.R.dimen._60ssp,
-    com.intuit.ssp.R.dimen._61ssp,
-    com.intuit.ssp.R.dimen._62ssp,
-    com.intuit.ssp.R.dimen._63ssp,
-    com.intuit.ssp.R.dimen._64ssp,
-    com.intuit.ssp.R.dimen._65ssp,
-    com.intuit.ssp.R.dimen._66ssp,
-    com.intuit.ssp.R.dimen._67ssp,
-    com.intuit.ssp.R.dimen._68ssp,
-    com.intuit.ssp.R.dimen._69ssp,
-    com.intuit.ssp.R.dimen._70ssp,
-    com.intuit.ssp.R.dimen._71ssp,
-    com.intuit.ssp.R.dimen._72ssp,
-    com.intuit.ssp.R.dimen._73ssp,
-    com.intuit.ssp.R.dimen._74ssp,
-    com.intuit.ssp.R.dimen._75ssp,
-    com.intuit.ssp.R.dimen._76ssp,
-    com.intuit.ssp.R.dimen._77ssp,
-    com.intuit.ssp.R.dimen._78ssp,
-    com.intuit.ssp.R.dimen._79ssp,
-    com.intuit.ssp.R.dimen._80ssp,
-    com.intuit.ssp.R.dimen._81ssp,
-    com.intuit.ssp.R.dimen._82ssp,
-    com.intuit.ssp.R.dimen._83ssp,
-    com.intuit.ssp.R.dimen._84ssp,
-    com.intuit.ssp.R.dimen._85ssp,
-    com.intuit.ssp.R.dimen._86ssp,
-    com.intuit.ssp.R.dimen._87ssp,
-    com.intuit.ssp.R.dimen._88ssp,
-    com.intuit.ssp.R.dimen._89ssp,
-    com.intuit.ssp.R.dimen._90ssp,
-    com.intuit.ssp.R.dimen._91ssp,
-    com.intuit.ssp.R.dimen._92ssp,
-    com.intuit.ssp.R.dimen._93ssp,
-    com.intuit.ssp.R.dimen._94ssp,
-    com.intuit.ssp.R.dimen._95ssp,
-    com.intuit.ssp.R.dimen._96ssp,
-    com.intuit.ssp.R.dimen._97ssp,
-    com.intuit.ssp.R.dimen._98ssp,
-    com.intuit.ssp.R.dimen._99ssp,
-    com.intuit.ssp.R.dimen._100ssp,
+    R.dimen._1ssp,
+    R.dimen._2ssp,
+    R.dimen._3ssp,
+    R.dimen._4ssp,
+    R.dimen._5ssp,
+    R.dimen._6ssp,
+    R.dimen._7ssp,
+    R.dimen._8ssp,
+    R.dimen._9ssp,
+    R.dimen._10ssp,
+    R.dimen._11ssp,
+    R.dimen._12ssp,
+    R.dimen._13ssp,
+    R.dimen._14ssp,
+    R.dimen._15ssp,
+    R.dimen._16ssp,
+    R.dimen._17ssp,
+    R.dimen._18ssp,
+    R.dimen._19ssp,
+    R.dimen._20ssp,
+    R.dimen._21ssp,
+    R.dimen._22ssp,
+    R.dimen._23ssp,
+    R.dimen._24ssp,
+    R.dimen._25ssp,
+    R.dimen._26ssp,
+    R.dimen._27ssp,
+    R.dimen._28ssp,
+    R.dimen._29ssp,
+    R.dimen._30ssp,
+    R.dimen._31ssp,
+    R.dimen._32ssp,
+    R.dimen._33ssp,
+    R.dimen._34ssp,
+    R.dimen._35ssp,
+    R.dimen._36ssp,
+    R.dimen._37ssp,
+    R.dimen._38ssp,
+    R.dimen._39ssp,
+    R.dimen._40ssp,
+    R.dimen._41ssp,
+    R.dimen._42ssp,
+    R.dimen._43ssp,
+    R.dimen._44ssp,
+    R.dimen._45ssp,
+    R.dimen._46ssp,
+    R.dimen._47ssp,
+    R.dimen._48ssp,
+    R.dimen._49ssp,
+    R.dimen._50ssp,
+    R.dimen._51ssp,
+    R.dimen._52ssp,
+    R.dimen._53ssp,
+    R.dimen._54ssp,
+    R.dimen._55ssp,
+    R.dimen._56ssp,
+    R.dimen._57ssp,
+    R.dimen._58ssp,
+    R.dimen._59ssp,
+    R.dimen._60ssp,
+    R.dimen._61ssp,
+    R.dimen._62ssp,
+    R.dimen._63ssp,
+    R.dimen._64ssp,
+    R.dimen._65ssp,
+    R.dimen._66ssp,
+    R.dimen._67ssp,
+    R.dimen._68ssp,
+    R.dimen._69ssp,
+    R.dimen._70ssp,
+    R.dimen._71ssp,
+    R.dimen._72ssp,
+    R.dimen._73ssp,
+    R.dimen._74ssp,
+    R.dimen._75ssp,
+    R.dimen._76ssp,
+    R.dimen._77ssp,
+    R.dimen._78ssp,
+    R.dimen._79ssp,
+    R.dimen._80ssp,
+    R.dimen._81ssp,
+    R.dimen._82ssp,
+    R.dimen._83ssp,
+    R.dimen._84ssp,
+    R.dimen._85ssp,
+    R.dimen._86ssp,
+    R.dimen._87ssp,
+    R.dimen._88ssp,
+    R.dimen._89ssp,
+    R.dimen._90ssp,
+    R.dimen._91ssp,
+    R.dimen._92ssp,
+    R.dimen._93ssp,
+    R.dimen._94ssp,
+    R.dimen._95ssp,
+    R.dimen._96ssp,
+    R.dimen._97ssp,
+    R.dimen._98ssp,
+    R.dimen._99ssp,
+    R.dimen._100ssp,
 )
 
