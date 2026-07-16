@@ -17,13 +17,13 @@ import com.ssp.kmp.R
  *
  * Actual size ≈ `value × smallestScreenWidth / 300` dp:
  *
- * | Smallest width          | Scale | Example: `12.Sdp` |
- * |-------------------------|-------|-------------------|
- * | 300dp (small phone)     | ×1.0  | 12.0dp            |
- * | 360dp (typical phone)   | ×1.2  | 14.4dp            |
- * | 390dp (large phone)     | ×1.3  | 15.6dp            |
- * | 480dp (small tablet)    | ×1.6  | 19.2dp            |
- * | 600dp (7" tablet)       | ×2.0  | 24.0dp            |
+ * | Smallest width          | Scale |
+ * |-------------------------|-------|
+ * | 300dp (small phone)     | ×1.0  |
+ * | 360dp (typical phone)   | ×1.2  |
+ * | 390dp (large phone)     | ×1.3  |
+ * | 480dp (small tablet)    | ×1.6  |
+ * | 600dp (7" tablet)       | ×2.0  |
  *
  * Supported range: `1..600` and `-60..-1`. Values outside this range fall back
  * to plain [dp] with no scaling.
@@ -52,13 +52,13 @@ private const val SSP_BASE_DP = 360f
  *
  * Actual size ≈ `value × smallestScreenWidth / 300` sp:
  *
- * | Smallest width          | Scale | Example: `12.Ssp` |
- * |-------------------------|-------|-------------------|
- * | 300dp (small phone)     | ×1.0  | 12.0sp            |
- * | 360dp (typical phone)   | ×1.2  | 14.4sp            |
- * | 390dp (large phone)     | ×1.3  | 15.6sp            |
- * | 480dp (small tablet)    | ×1.6  | 19.2sp            |
- * | 600dp (7" tablet)       | ×2.0  | 24.0sp            |
+ * | Smallest width          | Scale |
+ * |-------------------------|-------|
+ * | 300dp (small phone)     | ×1.0  |
+ * | 360dp (typical phone)   | ×1.2  |
+ * | 390dp (large phone)     | ×1.3  |
+ * | 480dp (small tablet)    | ×1.6  |
+ * | 600dp (7" tablet)       | ×2.0  |
  *
  * Supported range: `1..600`. Values outside this range fall back to plain [sp]
  * with no scaling.
