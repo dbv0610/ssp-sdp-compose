@@ -7,7 +7,7 @@ import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.service
 
 /**
- * The device width (in dp) the hints are computed for. 360 is the typical
+ * The device width (in dp) the hints are computed for. 420 is the typical
  * phone; set your own device's smallest width to see its exact values.
  */
 @Service(Service.Level.APP)
@@ -15,7 +15,7 @@ import com.intellij.openapi.components.service
 class SdpSettings : PersistentStateComponent<SdpSettings.State> {
 
     class State {
-        var deviceWidthDp: Int = 360
+        var deviceWidthDp: Int = 420
     }
 
     private var state = State()

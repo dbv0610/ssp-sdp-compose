@@ -203,16 +203,16 @@ The repo ships an IntelliJ/Android Studio plugin (`idea-plugin/`) that renders t
 computed value right at the call site as an inlay hint:
 
 ```kotlin
-Modifier.paddingBottom(12.Sdp)   // shown in the editor as: 12.Sdp = 14.4dp
-Text("Hi", fontSize = 14.ssp)    // shown in the editor as: 14.ssp = 14sp
+Modifier.paddingBottom(12.Sdp)   // shown in the editor as: 12.Sdp 420 ×1.4 → 16.8dp
+Text("Hi", fontSize = 14.ssp)    // shown in the editor as: 14.ssp 420 ×1.17 → 16.33sp
 ```
 
 Build and install:
 
 1. `./gradlew -p idea-plugin buildPlugin`
 2. In Android Studio: **Settings | Plugins | ⚙ | Install Plugin from Disk…** and pick
-   `idea-plugin/build/distributions/sdp-ssp-inlay-hints-1.0.0.zip`
-3. The device width used for the computation defaults to **360dp**; change it in
+   `idea-plugin/build/distributions/sdp-ssp-inlay-hints-<version>.zip`
+3. The device width used for the computation defaults to **420dp**; change it in
    **Settings | Tools | SDP/SSP Hints** to see the values for your device.
 
 ---

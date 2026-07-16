@@ -4,9 +4,9 @@
     <vendor>sdp-ssp-compose</vendor>
     <description><![CDATA[
         Shows the computed dp/sp value inline next to sdp/ssp extension usages,
-        e.g. <code>12.Sdp</code> is rendered as <code>12.Sdp = 14.4dp</code>.
+        e.g. <code>12.Sdp</code> is rendered as <code>12.Sdp 420 ×1.4 → 16.8dp</code>.
         The device width used for the computation is configurable in
-        Settings | Tools | SDP/SSP Hints (default 360dp).
+        Settings | Tools | SDP/SSP Hints (default 420dp).
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
