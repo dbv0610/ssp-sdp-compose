@@ -84,7 +84,7 @@ fun MyScreen() {
 }
 ```
 
-Also available on the **Android target only** (backed by explicit per-screen-width dimen resources bundled in the library — no external dependency):
+Also available on the **Android target only** — computed in pure Kotlin from the device configuration, **not `@Composable`**, so it works anywhere (default parameter values, plain classes, drawing code, …):
 
 ```kotlin
 import com.sdp.ssp.kmp.Sdp  // layout  (Int only)
@@ -93,6 +93,9 @@ import com.sdp.ssp.kmp.Ssp  // text    (Int only)
 Box(modifier = Modifier.size(120.Sdp, 48.Sdp)) {
     Text(text = "Hello", fontSize = 14.Ssp)
 }
+
+// also fine outside composition:
+data class Style(val padding: Dp = 16.Sdp)
 ```
 
 ### Extension reference
@@ -101,8 +104,8 @@ Box(modifier = Modifier.size(120.Sdp, 48.Sdp)) {
 |---|---|---|---|
 | `.sdp` | `Int`, `Float`, `Double` | `Dp` | Layout size, scales with screen |
 | `.ssp` | `Int`, `Float`, `Double` | `TextUnit` | Text size, scales with screen + font accessibility |
-| `.Sdp` | `Int` | `Dp` | Android only — bundled sdp resource buckets |
-| `.Ssp` | `Int` | `TextUnit` | Android only — continuous screen scaling |
+| `.Sdp` | `Int` | `Dp` | Android only — non-composable, 30dp screen-width buckets |
+| `.Ssp` | `Int` | `TextUnit` | Android only — non-composable, ignores system font scale |
 
 ---
 
@@ -110,7 +113,7 @@ Box(modifier = Modifier.size(120.Sdp, 48.Sdp)) {
 
 Package: **`com.sdp.ssp.android`**
 
-### Composable extensions
+### Sdp / Ssp extensions (non-composable — usable anywhere)
 
 ```kotlin
 import com.sdp.ssp.android.Sdp

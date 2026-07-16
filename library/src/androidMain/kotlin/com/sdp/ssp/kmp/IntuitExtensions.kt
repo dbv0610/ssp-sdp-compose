@@ -1,21 +1,38 @@
 package com.sdp.ssp.kmp
 
 import android.content.Context
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Stable
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ssp.kmp.R
+
+private const val BASE_DP = 300f
+private const val MIN_SW_DP = 300
+private const val MAX_SW_DP = 1080
+private const val SW_STEP_DP = 30
+
+/**
+ * Scale factor for a given smallest screen width, replicating the old
+ * `values-swXXXdp` resource buckets: the width is floored to a 30dp step and
+ * clamped to `300..1080`; below 300dp the scale is 1 (1sdp = 1dp).
+ */
+private fun scaleFactor(smallestScreenWidthDp: Int): Float {
+    if (smallestScreenWidthDp < MIN_SW_DP) return 1f
+    val bucket = minOf(smallestScreenWidthDp - smallestScreenWidthDp % SW_STEP_DP, MAX_SW_DP)
+    return bucket / BASE_DP
+}
+
+private val deviceScale: Float
+    get() = scaleFactor(SdpRuntime.configuration.smallestScreenWidthDp)
+
+private val deviceFontScale: Float
+    get() = SdpRuntime.configuration.fontScale
 
 /**
  * **Scalable dp** — a [Dp] that scales with the device's smallest screen width.
  *
- * Actual size ≈ `value × smallestScreenWidth / 300` dp:
+ * Actual size = `value × smallestScreenWidth / 300` dp:
  *
  * | Smallest width          | Scale |
  * |-------------------------|-------|
@@ -25,32 +42,26 @@ import com.ssp.kmp.R
  * | 480dp (small tablet)    | ×1.6  |
  * | 600dp (7" tablet)       | ×2.0  |
  *
- * Supported range: `1..600` and `-60..-1`. Values outside this range fall back
- * to plain [dp] with no scaling.
+ * Values are identical to the `intuit/sdp` library (same 30dp buckets, same
+ * `n × sw / 300` formula), but computed in pure Kotlin from the app configuration
+ * instead of dimen resources. Not composable, so it can be
+ * used anywhere: default parameter values, plain classes, drawing code, etc.
+ * The value is read at call time; it is not observed by composition, so a
+ * configuration change only takes effect on the next read (activity recreation
+ * covers the common cases).
  *
  * @see Ssp for text sizes
- * @see getSdp for a non-composable version
+ * @see getSdp for a window-aware version (multi-window / split screen)
  */
 @get:Stable
 val Int.Sdp: Dp
-    @Composable
-    @ReadOnlyComposable
-    get() {
-        val resId = when (this) {
-            in 1..600 -> sdpPos[this - 1]
-            in -60..-1 -> sdpNeg[-this - 1]
-            else -> return this.dp
-        }
-        return dimensionResource(resId)
-    }
-
-private const val SSP_BASE_DP = 360f
+    get() = (this * deviceScale).dp
 
 /**
  * **Scalable sp** — a text size [TextUnit] that scales with the device's smallest
  * screen width but **ignores the user's system font-size setting**.
  *
- * Actual size ≈ `value × smallestScreenWidth / 300` sp:
+ * Actual size = `value × smallestScreenWidth / 300` sp:
  *
  * | Smallest width          | Scale |
  * |-------------------------|-------|
@@ -60,848 +71,48 @@ private const val SSP_BASE_DP = 360f
  * | 480dp (small tablet)    | ×1.6  |
  * | 600dp (7" tablet)       | ×2.0  |
  *
- * Supported range: `1..600`. Values outside this range fall back to plain [sp]
- * with no scaling.
+ * Not composable — usable anywhere. The user's font scale is divided out at call
+ * time so the rendered size stays fixed regardless of the accessibility setting.
  *
  * @see RSsp if the text should also respect the user's font-size (accessibility) setting
  */
 @get:Stable
 val Int.Ssp: TextUnit
-    @Composable
-    @ReadOnlyComposable
-    get() {
-        val resId = when {
-            this in 1..600 -> sdpPos[this - 1]
-            else -> return this.sp
-        }
-        return with(LocalDensity.current) { dimensionResource(resId).toSp() }
-    }
+    get() = (this * deviceScale / deviceFontScale).sp
 
 /**
  * **Respectful scalable sp** — like [Ssp], scales with the device's smallest screen
  * width, but **also respects the user's system font-size (accessibility) setting**.
  *
- * Base size ≈ `value × smallestScreenWidth / 300` sp, then multiplied by the user's
- * font scale (e.g. `12.RSsp` on a 360dp-wide phone ≈ 14.4sp × font scale).
+ * Base size = `value × smallestScreenWidth / 300` sp, then multiplied by the user's
+ * font scale at render time (e.g. `12.RSsp` on a 360dp-wide phone ≈ 14.4sp × font scale).
  *
- * Supported range: `1..100`. Values outside this range fall back to plain [sp]
- * with no scaling.
+ * This matches the behavior of the `intuit/ssp` library (its dimens are declared
+ * in `sp`, so they scale with the accessibility setting too).
  */
 @get:Stable
 val Int.RSsp: TextUnit
-    @Composable
-    @ReadOnlyComposable
-    get() {
-        val resId = when {
-            this in 1..100 -> sspPos[this - 1]
-            else -> return this.sp
-        }
-        return with(LocalDensity.current) { dimensionResource(resId).toSp() }
-    }
+    get() = (this * deviceScale).sp
 
 
-// ── Non-Composable versions ──────────────────────────────────────────────────
+// ── Context-based versions (window-aware) ────────────────────────────────────
 
 /**
- * Non-composable version of [Sdp]: returns the scaled size **in dp** as a [Float].
+ * Window-aware version of [Sdp]: returns the scaled size **in dp** as a [Float],
+ * using the given [context]'s configuration (correct in multi-window / split screen).
  *
- * Actual size ≈ `value × smallestScreenWidth / 300` dp (e.g. `12.getSdp(ctx)` on a
- * 360dp-wide phone returns `14.4`). Supported range: `1..600` and `-60..-1`;
- * other values are returned unscaled.
+ * Actual size = `value × smallestScreenWidth / 300` dp (e.g. `12.getSdp(ctx)` on a
+ * 360dp-wide phone returns `14.4`).
  */
-fun Int.getSdp(context: Context): Float {
-    val resId = when (this) {
-        in 1..600 -> sdpPos[this - 1]
-        in -60..-1 -> sdpNeg[-this - 1]
-        else -> return this.toFloat()
-    }
-    return context.resources.getDimension(resId) / context.resources.displayMetrics.density
-}
+fun Int.getSdp(context: Context): Float =
+    this * scaleFactor(context.resources.configuration.smallestScreenWidthDp)
 
 /**
- * Non-composable version of [RSsp]: returns the scaled text size **in sp** as a [Float].
+ * Window-aware version of [RSsp]: returns the scaled text size **in sp** as a [Float],
+ * using the given [context]'s configuration (correct in multi-window / split screen).
  *
- * Actual size ≈ `value × smallestScreenWidth / 300` sp (e.g. `12.getSsp(ctx)` on a
- * 360dp-wide phone returns `14.4`). Supported range: `1..100`; other values are
- * returned unscaled.
+ * Actual size = `value × smallestScreenWidth / 300` sp (e.g. `12.getSsp(ctx)` on a
+ * 360dp-wide phone returns `14.4`).
  */
-fun Int.getSsp(context: Context): Float {
-    val resId = when {
-        this in 1..100 -> sspPos[this - 1]
-        else -> return this.toFloat()
-    }
-    return context.resources.getDimension(resId) / context.resources.displayMetrics.scaledDensity
-}
-
-// ── SDP positive 1–600 ───────────────────────────────────────────────────────
-private val sdpPos = intArrayOf(
-    R.dimen._1sdp,
-    R.dimen._2sdp,
-    R.dimen._3sdp,
-    R.dimen._4sdp,
-    R.dimen._5sdp,
-    R.dimen._6sdp,
-    R.dimen._7sdp,
-    R.dimen._8sdp,
-    R.dimen._9sdp,
-    R.dimen._10sdp,
-    R.dimen._11sdp,
-    R.dimen._12sdp,
-    R.dimen._13sdp,
-    R.dimen._14sdp,
-    R.dimen._15sdp,
-    R.dimen._16sdp,
-    R.dimen._17sdp,
-    R.dimen._18sdp,
-    R.dimen._19sdp,
-    R.dimen._20sdp,
-    R.dimen._21sdp,
-    R.dimen._22sdp,
-    R.dimen._23sdp,
-    R.dimen._24sdp,
-    R.dimen._25sdp,
-    R.dimen._26sdp,
-    R.dimen._27sdp,
-    R.dimen._28sdp,
-    R.dimen._29sdp,
-    R.dimen._30sdp,
-    R.dimen._31sdp,
-    R.dimen._32sdp,
-    R.dimen._33sdp,
-    R.dimen._34sdp,
-    R.dimen._35sdp,
-    R.dimen._36sdp,
-    R.dimen._37sdp,
-    R.dimen._38sdp,
-    R.dimen._39sdp,
-    R.dimen._40sdp,
-    R.dimen._41sdp,
-    R.dimen._42sdp,
-    R.dimen._43sdp,
-    R.dimen._44sdp,
-    R.dimen._45sdp,
-    R.dimen._46sdp,
-    R.dimen._47sdp,
-    R.dimen._48sdp,
-    R.dimen._49sdp,
-    R.dimen._50sdp,
-    R.dimen._51sdp,
-    R.dimen._52sdp,
-    R.dimen._53sdp,
-    R.dimen._54sdp,
-    R.dimen._55sdp,
-    R.dimen._56sdp,
-    R.dimen._57sdp,
-    R.dimen._58sdp,
-    R.dimen._59sdp,
-    R.dimen._60sdp,
-    R.dimen._61sdp,
-    R.dimen._62sdp,
-    R.dimen._63sdp,
-    R.dimen._64sdp,
-    R.dimen._65sdp,
-    R.dimen._66sdp,
-    R.dimen._67sdp,
-    R.dimen._68sdp,
-    R.dimen._69sdp,
-    R.dimen._70sdp,
-    R.dimen._71sdp,
-    R.dimen._72sdp,
-    R.dimen._73sdp,
-    R.dimen._74sdp,
-    R.dimen._75sdp,
-    R.dimen._76sdp,
-    R.dimen._77sdp,
-    R.dimen._78sdp,
-    R.dimen._79sdp,
-    R.dimen._80sdp,
-    R.dimen._81sdp,
-    R.dimen._82sdp,
-    R.dimen._83sdp,
-    R.dimen._84sdp,
-    R.dimen._85sdp,
-    R.dimen._86sdp,
-    R.dimen._87sdp,
-    R.dimen._88sdp,
-    R.dimen._89sdp,
-    R.dimen._90sdp,
-    R.dimen._91sdp,
-    R.dimen._92sdp,
-    R.dimen._93sdp,
-    R.dimen._94sdp,
-    R.dimen._95sdp,
-    R.dimen._96sdp,
-    R.dimen._97sdp,
-    R.dimen._98sdp,
-    R.dimen._99sdp,
-    R.dimen._100sdp,
-    R.dimen._101sdp,
-    R.dimen._102sdp,
-    R.dimen._103sdp,
-    R.dimen._104sdp,
-    R.dimen._105sdp,
-    R.dimen._106sdp,
-    R.dimen._107sdp,
-    R.dimen._108sdp,
-    R.dimen._109sdp,
-    R.dimen._110sdp,
-    R.dimen._111sdp,
-    R.dimen._112sdp,
-    R.dimen._113sdp,
-    R.dimen._114sdp,
-    R.dimen._115sdp,
-    R.dimen._116sdp,
-    R.dimen._117sdp,
-    R.dimen._118sdp,
-    R.dimen._119sdp,
-    R.dimen._120sdp,
-    R.dimen._121sdp,
-    R.dimen._122sdp,
-    R.dimen._123sdp,
-    R.dimen._124sdp,
-    R.dimen._125sdp,
-    R.dimen._126sdp,
-    R.dimen._127sdp,
-    R.dimen._128sdp,
-    R.dimen._129sdp,
-    R.dimen._130sdp,
-    R.dimen._131sdp,
-    R.dimen._132sdp,
-    R.dimen._133sdp,
-    R.dimen._134sdp,
-    R.dimen._135sdp,
-    R.dimen._136sdp,
-    R.dimen._137sdp,
-    R.dimen._138sdp,
-    R.dimen._139sdp,
-    R.dimen._140sdp,
-    R.dimen._141sdp,
-    R.dimen._142sdp,
-    R.dimen._143sdp,
-    R.dimen._144sdp,
-    R.dimen._145sdp,
-    R.dimen._146sdp,
-    R.dimen._147sdp,
-    R.dimen._148sdp,
-    R.dimen._149sdp,
-    R.dimen._150sdp,
-    R.dimen._151sdp,
-    R.dimen._152sdp,
-    R.dimen._153sdp,
-    R.dimen._154sdp,
-    R.dimen._155sdp,
-    R.dimen._156sdp,
-    R.dimen._157sdp,
-    R.dimen._158sdp,
-    R.dimen._159sdp,
-    R.dimen._160sdp,
-    R.dimen._161sdp,
-    R.dimen._162sdp,
-    R.dimen._163sdp,
-    R.dimen._164sdp,
-    R.dimen._165sdp,
-    R.dimen._166sdp,
-    R.dimen._167sdp,
-    R.dimen._168sdp,
-    R.dimen._169sdp,
-    R.dimen._170sdp,
-    R.dimen._171sdp,
-    R.dimen._172sdp,
-    R.dimen._173sdp,
-    R.dimen._174sdp,
-    R.dimen._175sdp,
-    R.dimen._176sdp,
-    R.dimen._177sdp,
-    R.dimen._178sdp,
-    R.dimen._179sdp,
-    R.dimen._180sdp,
-    R.dimen._181sdp,
-    R.dimen._182sdp,
-    R.dimen._183sdp,
-    R.dimen._184sdp,
-    R.dimen._185sdp,
-    R.dimen._186sdp,
-    R.dimen._187sdp,
-    R.dimen._188sdp,
-    R.dimen._189sdp,
-    R.dimen._190sdp,
-    R.dimen._191sdp,
-    R.dimen._192sdp,
-    R.dimen._193sdp,
-    R.dimen._194sdp,
-    R.dimen._195sdp,
-    R.dimen._196sdp,
-    R.dimen._197sdp,
-    R.dimen._198sdp,
-    R.dimen._199sdp,
-    R.dimen._200sdp,
-    R.dimen._201sdp,
-    R.dimen._202sdp,
-    R.dimen._203sdp,
-    R.dimen._204sdp,
-    R.dimen._205sdp,
-    R.dimen._206sdp,
-    R.dimen._207sdp,
-    R.dimen._208sdp,
-    R.dimen._209sdp,
-    R.dimen._210sdp,
-    R.dimen._211sdp,
-    R.dimen._212sdp,
-    R.dimen._213sdp,
-    R.dimen._214sdp,
-    R.dimen._215sdp,
-    R.dimen._216sdp,
-    R.dimen._217sdp,
-    R.dimen._218sdp,
-    R.dimen._219sdp,
-    R.dimen._220sdp,
-    R.dimen._221sdp,
-    R.dimen._222sdp,
-    R.dimen._223sdp,
-    R.dimen._224sdp,
-    R.dimen._225sdp,
-    R.dimen._226sdp,
-    R.dimen._227sdp,
-    R.dimen._228sdp,
-    R.dimen._229sdp,
-    R.dimen._230sdp,
-    R.dimen._231sdp,
-    R.dimen._232sdp,
-    R.dimen._233sdp,
-    R.dimen._234sdp,
-    R.dimen._235sdp,
-    R.dimen._236sdp,
-    R.dimen._237sdp,
-    R.dimen._238sdp,
-    R.dimen._239sdp,
-    R.dimen._240sdp,
-    R.dimen._241sdp,
-    R.dimen._242sdp,
-    R.dimen._243sdp,
-    R.dimen._244sdp,
-    R.dimen._245sdp,
-    R.dimen._246sdp,
-    R.dimen._247sdp,
-    R.dimen._248sdp,
-    R.dimen._249sdp,
-    R.dimen._250sdp,
-    R.dimen._251sdp,
-    R.dimen._252sdp,
-    R.dimen._253sdp,
-    R.dimen._254sdp,
-    R.dimen._255sdp,
-    R.dimen._256sdp,
-    R.dimen._257sdp,
-    R.dimen._258sdp,
-    R.dimen._259sdp,
-    R.dimen._260sdp,
-    R.dimen._261sdp,
-    R.dimen._262sdp,
-    R.dimen._263sdp,
-    R.dimen._264sdp,
-    R.dimen._265sdp,
-    R.dimen._266sdp,
-    R.dimen._267sdp,
-    R.dimen._268sdp,
-    R.dimen._269sdp,
-    R.dimen._270sdp,
-    R.dimen._271sdp,
-    R.dimen._272sdp,
-    R.dimen._273sdp,
-    R.dimen._274sdp,
-    R.dimen._275sdp,
-    R.dimen._276sdp,
-    R.dimen._277sdp,
-    R.dimen._278sdp,
-    R.dimen._279sdp,
-    R.dimen._280sdp,
-    R.dimen._281sdp,
-    R.dimen._282sdp,
-    R.dimen._283sdp,
-    R.dimen._284sdp,
-    R.dimen._285sdp,
-    R.dimen._286sdp,
-    R.dimen._287sdp,
-    R.dimen._288sdp,
-    R.dimen._289sdp,
-    R.dimen._290sdp,
-    R.dimen._291sdp,
-    R.dimen._292sdp,
-    R.dimen._293sdp,
-    R.dimen._294sdp,
-    R.dimen._295sdp,
-    R.dimen._296sdp,
-    R.dimen._297sdp,
-    R.dimen._298sdp,
-    R.dimen._299sdp,
-    R.dimen._300sdp,
-    R.dimen._301sdp,
-    R.dimen._302sdp,
-    R.dimen._303sdp,
-    R.dimen._304sdp,
-    R.dimen._305sdp,
-    R.dimen._306sdp,
-    R.dimen._307sdp,
-    R.dimen._308sdp,
-    R.dimen._309sdp,
-    R.dimen._310sdp,
-    R.dimen._311sdp,
-    R.dimen._312sdp,
-    R.dimen._313sdp,
-    R.dimen._314sdp,
-    R.dimen._315sdp,
-    R.dimen._316sdp,
-    R.dimen._317sdp,
-    R.dimen._318sdp,
-    R.dimen._319sdp,
-    R.dimen._320sdp,
-    R.dimen._321sdp,
-    R.dimen._322sdp,
-    R.dimen._323sdp,
-    R.dimen._324sdp,
-    R.dimen._325sdp,
-    R.dimen._326sdp,
-    R.dimen._327sdp,
-    R.dimen._328sdp,
-    R.dimen._329sdp,
-    R.dimen._330sdp,
-    R.dimen._331sdp,
-    R.dimen._332sdp,
-    R.dimen._333sdp,
-    R.dimen._334sdp,
-    R.dimen._335sdp,
-    R.dimen._336sdp,
-    R.dimen._337sdp,
-    R.dimen._338sdp,
-    R.dimen._339sdp,
-    R.dimen._340sdp,
-    R.dimen._341sdp,
-    R.dimen._342sdp,
-    R.dimen._343sdp,
-    R.dimen._344sdp,
-    R.dimen._345sdp,
-    R.dimen._346sdp,
-    R.dimen._347sdp,
-    R.dimen._348sdp,
-    R.dimen._349sdp,
-    R.dimen._350sdp,
-    R.dimen._351sdp,
-    R.dimen._352sdp,
-    R.dimen._353sdp,
-    R.dimen._354sdp,
-    R.dimen._355sdp,
-    R.dimen._356sdp,
-    R.dimen._357sdp,
-    R.dimen._358sdp,
-    R.dimen._359sdp,
-    R.dimen._360sdp,
-    R.dimen._361sdp,
-    R.dimen._362sdp,
-    R.dimen._363sdp,
-    R.dimen._364sdp,
-    R.dimen._365sdp,
-    R.dimen._366sdp,
-    R.dimen._367sdp,
-    R.dimen._368sdp,
-    R.dimen._369sdp,
-    R.dimen._370sdp,
-    R.dimen._371sdp,
-    R.dimen._372sdp,
-    R.dimen._373sdp,
-    R.dimen._374sdp,
-    R.dimen._375sdp,
-    R.dimen._376sdp,
-    R.dimen._377sdp,
-    R.dimen._378sdp,
-    R.dimen._379sdp,
-    R.dimen._380sdp,
-    R.dimen._381sdp,
-    R.dimen._382sdp,
-    R.dimen._383sdp,
-    R.dimen._384sdp,
-    R.dimen._385sdp,
-    R.dimen._386sdp,
-    R.dimen._387sdp,
-    R.dimen._388sdp,
-    R.dimen._389sdp,
-    R.dimen._390sdp,
-    R.dimen._391sdp,
-    R.dimen._392sdp,
-    R.dimen._393sdp,
-    R.dimen._394sdp,
-    R.dimen._395sdp,
-    R.dimen._396sdp,
-    R.dimen._397sdp,
-    R.dimen._398sdp,
-    R.dimen._399sdp,
-    R.dimen._400sdp,
-    R.dimen._401sdp,
-    R.dimen._402sdp,
-    R.dimen._403sdp,
-    R.dimen._404sdp,
-    R.dimen._405sdp,
-    R.dimen._406sdp,
-    R.dimen._407sdp,
-    R.dimen._408sdp,
-    R.dimen._409sdp,
-    R.dimen._410sdp,
-    R.dimen._411sdp,
-    R.dimen._412sdp,
-    R.dimen._413sdp,
-    R.dimen._414sdp,
-    R.dimen._415sdp,
-    R.dimen._416sdp,
-    R.dimen._417sdp,
-    R.dimen._418sdp,
-    R.dimen._419sdp,
-    R.dimen._420sdp,
-    R.dimen._421sdp,
-    R.dimen._422sdp,
-    R.dimen._423sdp,
-    R.dimen._424sdp,
-    R.dimen._425sdp,
-    R.dimen._426sdp,
-    R.dimen._427sdp,
-    R.dimen._428sdp,
-    R.dimen._429sdp,
-    R.dimen._430sdp,
-    R.dimen._431sdp,
-    R.dimen._432sdp,
-    R.dimen._433sdp,
-    R.dimen._434sdp,
-    R.dimen._435sdp,
-    R.dimen._436sdp,
-    R.dimen._437sdp,
-    R.dimen._438sdp,
-    R.dimen._439sdp,
-    R.dimen._440sdp,
-    R.dimen._441sdp,
-    R.dimen._442sdp,
-    R.dimen._443sdp,
-    R.dimen._444sdp,
-    R.dimen._445sdp,
-    R.dimen._446sdp,
-    R.dimen._447sdp,
-    R.dimen._448sdp,
-    R.dimen._449sdp,
-    R.dimen._450sdp,
-    R.dimen._451sdp,
-    R.dimen._452sdp,
-    R.dimen._453sdp,
-    R.dimen._454sdp,
-    R.dimen._455sdp,
-    R.dimen._456sdp,
-    R.dimen._457sdp,
-    R.dimen._458sdp,
-    R.dimen._459sdp,
-    R.dimen._460sdp,
-    R.dimen._461sdp,
-    R.dimen._462sdp,
-    R.dimen._463sdp,
-    R.dimen._464sdp,
-    R.dimen._465sdp,
-    R.dimen._466sdp,
-    R.dimen._467sdp,
-    R.dimen._468sdp,
-    R.dimen._469sdp,
-    R.dimen._470sdp,
-    R.dimen._471sdp,
-    R.dimen._472sdp,
-    R.dimen._473sdp,
-    R.dimen._474sdp,
-    R.dimen._475sdp,
-    R.dimen._476sdp,
-    R.dimen._477sdp,
-    R.dimen._478sdp,
-    R.dimen._479sdp,
-    R.dimen._480sdp,
-    R.dimen._481sdp,
-    R.dimen._482sdp,
-    R.dimen._483sdp,
-    R.dimen._484sdp,
-    R.dimen._485sdp,
-    R.dimen._486sdp,
-    R.dimen._487sdp,
-    R.dimen._488sdp,
-    R.dimen._489sdp,
-    R.dimen._490sdp,
-    R.dimen._491sdp,
-    R.dimen._492sdp,
-    R.dimen._493sdp,
-    R.dimen._494sdp,
-    R.dimen._495sdp,
-    R.dimen._496sdp,
-    R.dimen._497sdp,
-    R.dimen._498sdp,
-    R.dimen._499sdp,
-    R.dimen._500sdp,
-    R.dimen._501sdp,
-    R.dimen._502sdp,
-    R.dimen._503sdp,
-    R.dimen._504sdp,
-    R.dimen._505sdp,
-    R.dimen._506sdp,
-    R.dimen._507sdp,
-    R.dimen._508sdp,
-    R.dimen._509sdp,
-    R.dimen._510sdp,
-    R.dimen._511sdp,
-    R.dimen._512sdp,
-    R.dimen._513sdp,
-    R.dimen._514sdp,
-    R.dimen._515sdp,
-    R.dimen._516sdp,
-    R.dimen._517sdp,
-    R.dimen._518sdp,
-    R.dimen._519sdp,
-    R.dimen._520sdp,
-    R.dimen._521sdp,
-    R.dimen._522sdp,
-    R.dimen._523sdp,
-    R.dimen._524sdp,
-    R.dimen._525sdp,
-    R.dimen._526sdp,
-    R.dimen._527sdp,
-    R.dimen._528sdp,
-    R.dimen._529sdp,
-    R.dimen._530sdp,
-    R.dimen._531sdp,
-    R.dimen._532sdp,
-    R.dimen._533sdp,
-    R.dimen._534sdp,
-    R.dimen._535sdp,
-    R.dimen._536sdp,
-    R.dimen._537sdp,
-    R.dimen._538sdp,
-    R.dimen._539sdp,
-    R.dimen._540sdp,
-    R.dimen._541sdp,
-    R.dimen._542sdp,
-    R.dimen._543sdp,
-    R.dimen._544sdp,
-    R.dimen._545sdp,
-    R.dimen._546sdp,
-    R.dimen._547sdp,
-    R.dimen._548sdp,
-    R.dimen._549sdp,
-    R.dimen._550sdp,
-    R.dimen._551sdp,
-    R.dimen._552sdp,
-    R.dimen._553sdp,
-    R.dimen._554sdp,
-    R.dimen._555sdp,
-    R.dimen._556sdp,
-    R.dimen._557sdp,
-    R.dimen._558sdp,
-    R.dimen._559sdp,
-    R.dimen._560sdp,
-    R.dimen._561sdp,
-    R.dimen._562sdp,
-    R.dimen._563sdp,
-    R.dimen._564sdp,
-    R.dimen._565sdp,
-    R.dimen._566sdp,
-    R.dimen._567sdp,
-    R.dimen._568sdp,
-    R.dimen._569sdp,
-    R.dimen._570sdp,
-    R.dimen._571sdp,
-    R.dimen._572sdp,
-    R.dimen._573sdp,
-    R.dimen._574sdp,
-    R.dimen._575sdp,
-    R.dimen._576sdp,
-    R.dimen._577sdp,
-    R.dimen._578sdp,
-    R.dimen._579sdp,
-    R.dimen._580sdp,
-    R.dimen._581sdp,
-    R.dimen._582sdp,
-    R.dimen._583sdp,
-    R.dimen._584sdp,
-    R.dimen._585sdp,
-    R.dimen._586sdp,
-    R.dimen._587sdp,
-    R.dimen._588sdp,
-    R.dimen._589sdp,
-    R.dimen._590sdp,
-    R.dimen._591sdp,
-    R.dimen._592sdp,
-    R.dimen._593sdp,
-    R.dimen._594sdp,
-    R.dimen._595sdp,
-    R.dimen._596sdp,
-    R.dimen._597sdp,
-    R.dimen._598sdp,
-    R.dimen._599sdp,
-    R.dimen._600sdp,
-)
-
-// ── SDP negative 1–100 ──────────────────────────────────────────────────────
-private val sdpNeg = intArrayOf(
-    R.dimen._minus1sdp,
-    R.dimen._minus2sdp,
-    R.dimen._minus3sdp,
-    R.dimen._minus4sdp,
-    R.dimen._minus5sdp,
-    R.dimen._minus6sdp,
-    R.dimen._minus7sdp,
-    R.dimen._minus8sdp,
-    R.dimen._minus9sdp,
-    R.dimen._minus10sdp,
-    R.dimen._minus11sdp,
-    R.dimen._minus12sdp,
-    R.dimen._minus13sdp,
-    R.dimen._minus14sdp,
-    R.dimen._minus15sdp,
-    R.dimen._minus16sdp,
-    R.dimen._minus17sdp,
-    R.dimen._minus18sdp,
-    R.dimen._minus19sdp,
-    R.dimen._minus20sdp,
-    R.dimen._minus21sdp,
-    R.dimen._minus22sdp,
-    R.dimen._minus23sdp,
-    R.dimen._minus24sdp,
-    R.dimen._minus25sdp,
-    R.dimen._minus26sdp,
-    R.dimen._minus27sdp,
-    R.dimen._minus28sdp,
-    R.dimen._minus29sdp,
-    R.dimen._minus30sdp,
-    R.dimen._minus31sdp,
-    R.dimen._minus32sdp,
-    R.dimen._minus33sdp,
-    R.dimen._minus34sdp,
-    R.dimen._minus35sdp,
-    R.dimen._minus36sdp,
-    R.dimen._minus37sdp,
-    R.dimen._minus38sdp,
-    R.dimen._minus39sdp,
-    R.dimen._minus40sdp,
-    R.dimen._minus41sdp,
-    R.dimen._minus42sdp,
-    R.dimen._minus43sdp,
-    R.dimen._minus44sdp,
-    R.dimen._minus45sdp,
-    R.dimen._minus46sdp,
-    R.dimen._minus47sdp,
-    R.dimen._minus48sdp,
-    R.dimen._minus49sdp,
-    R.dimen._minus50sdp,
-    R.dimen._minus51sdp,
-    R.dimen._minus52sdp,
-    R.dimen._minus53sdp,
-    R.dimen._minus54sdp,
-    R.dimen._minus55sdp,
-    R.dimen._minus56sdp,
-    R.dimen._minus57sdp,
-    R.dimen._minus58sdp,
-    R.dimen._minus59sdp,
-    R.dimen._minus60sdp,
-)
-
-// ── SSP positive 1–100 ──────────────────────────────────────────────────────
-private val sspPos = intArrayOf(
-    R.dimen._1ssp,
-    R.dimen._2ssp,
-    R.dimen._3ssp,
-    R.dimen._4ssp,
-    R.dimen._5ssp,
-    R.dimen._6ssp,
-    R.dimen._7ssp,
-    R.dimen._8ssp,
-    R.dimen._9ssp,
-    R.dimen._10ssp,
-    R.dimen._11ssp,
-    R.dimen._12ssp,
-    R.dimen._13ssp,
-    R.dimen._14ssp,
-    R.dimen._15ssp,
-    R.dimen._16ssp,
-    R.dimen._17ssp,
-    R.dimen._18ssp,
-    R.dimen._19ssp,
-    R.dimen._20ssp,
-    R.dimen._21ssp,
-    R.dimen._22ssp,
-    R.dimen._23ssp,
-    R.dimen._24ssp,
-    R.dimen._25ssp,
-    R.dimen._26ssp,
-    R.dimen._27ssp,
-    R.dimen._28ssp,
-    R.dimen._29ssp,
-    R.dimen._30ssp,
-    R.dimen._31ssp,
-    R.dimen._32ssp,
-    R.dimen._33ssp,
-    R.dimen._34ssp,
-    R.dimen._35ssp,
-    R.dimen._36ssp,
-    R.dimen._37ssp,
-    R.dimen._38ssp,
-    R.dimen._39ssp,
-    R.dimen._40ssp,
-    R.dimen._41ssp,
-    R.dimen._42ssp,
-    R.dimen._43ssp,
-    R.dimen._44ssp,
-    R.dimen._45ssp,
-    R.dimen._46ssp,
-    R.dimen._47ssp,
-    R.dimen._48ssp,
-    R.dimen._49ssp,
-    R.dimen._50ssp,
-    R.dimen._51ssp,
-    R.dimen._52ssp,
-    R.dimen._53ssp,
-    R.dimen._54ssp,
-    R.dimen._55ssp,
-    R.dimen._56ssp,
-    R.dimen._57ssp,
-    R.dimen._58ssp,
-    R.dimen._59ssp,
-    R.dimen._60ssp,
-    R.dimen._61ssp,
-    R.dimen._62ssp,
-    R.dimen._63ssp,
-    R.dimen._64ssp,
-    R.dimen._65ssp,
-    R.dimen._66ssp,
-    R.dimen._67ssp,
-    R.dimen._68ssp,
-    R.dimen._69ssp,
-    R.dimen._70ssp,
-    R.dimen._71ssp,
-    R.dimen._72ssp,
-    R.dimen._73ssp,
-    R.dimen._74ssp,
-    R.dimen._75ssp,
-    R.dimen._76ssp,
-    R.dimen._77ssp,
-    R.dimen._78ssp,
-    R.dimen._79ssp,
-    R.dimen._80ssp,
-    R.dimen._81ssp,
-    R.dimen._82ssp,
-    R.dimen._83ssp,
-    R.dimen._84ssp,
-    R.dimen._85ssp,
-    R.dimen._86ssp,
-    R.dimen._87ssp,
-    R.dimen._88ssp,
-    R.dimen._89ssp,
-    R.dimen._90ssp,
-    R.dimen._91ssp,
-    R.dimen._92ssp,
-    R.dimen._93ssp,
-    R.dimen._94ssp,
-    R.dimen._95ssp,
-    R.dimen._96ssp,
-    R.dimen._97ssp,
-    R.dimen._98ssp,
-    R.dimen._99ssp,
-    R.dimen._100ssp,
-)
-
+fun Int.getSsp(context: Context): Float =
+    this * scaleFactor(context.resources.configuration.smallestScreenWidthDp)

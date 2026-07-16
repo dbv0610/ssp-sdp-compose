@@ -1,2 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="com.sdp.ssp.android.SdpInitProvider"
+            android:authorities="${applicationId}.sdp-ssp-android-init"
+            android:exported="false" />
+    </application>
+</manifest>
