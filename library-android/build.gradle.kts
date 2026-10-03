@@ -35,7 +35,7 @@ android {
 
 dependencies {
     implementation(libs.androidx.compose.ui)
-    implementation("androidx.compose.runtime:runtime:1.12.1")
+    implementation("androidx.compose.runtime:runtime:1.11.1")
     implementation(libs.androidx.window)
 }
 
