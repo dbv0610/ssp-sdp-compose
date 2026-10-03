@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.sdp.ssp"
-version = System.getenv("VERSION") ?: "1.2.0"
+version = System.getenv("VERSION") ?: "1.4.0"
 
 kotlin {
     compilerOptions {
@@ -35,7 +35,7 @@ android {
 
 dependencies {
     implementation(libs.androidx.compose.ui)
-    implementation("androidx.compose.runtime:runtime:1.11.1")
+    implementation("androidx.compose.runtime:runtime:1.12.1")
     implementation(libs.androidx.window)
 }
 

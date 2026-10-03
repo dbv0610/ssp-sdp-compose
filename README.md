@@ -104,7 +104,7 @@ data class Style(val padding: Dp = 16.Sdp)
 |---|---|---|---|
 | `.sdp` | `Int`, `Float`, `Double` | `Dp` | Layout size, scales with screen |
 | `.ssp` | `Int`, `Float`, `Double` | `TextUnit` | Text size, scales with screen + font accessibility |
-| `.Sdp` | `Int` | `Dp` | Android only — non-composable, 30dp screen-width buckets |
+| `.Sdp` | `Int` | `Dp` | Android only — non-composable, identical to intuit/sdp (30dp buckets) |
 | `.Ssp` | `Int` | `TextUnit` | Android only — non-composable, ignores system font scale |
 
 ---
@@ -197,6 +197,14 @@ SDPConfig.setScalingRatio(360.0)
 ```
 
 Set this to the screen width in dp that your design was created for. The default is `360`. Increase to shrink all sizes; decrease to grow them.
+
+These settings apply to `sdp` / `ssp` (`Sdp` / `Ssp` / `RSsp` always match intuit exactly). By default sizes are **exactly proportional** to the screen (small phones shrink, tablets grow by the same ratio), so the layout keeps the same proportions everywhere. If you prefer tablets to show *more content* rather than *bigger content*, damp the growth:
+
+```kotlin
+SDPConfig.setLargeScreenBreakpoint(480.0) // smallest width (dp) where damping starts
+SDPConfig.setLargeScreenRate(0.5)         // 1.0 = proportional (default), 0.0 = stop growing
+SDPConfig.setSmallScreenRate(1.0)         // same idea below the design width
+```
 
 ---
 

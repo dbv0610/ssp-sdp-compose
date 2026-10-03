@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.sdp.ssp"
-version = System.getenv("VERSION") ?: "1.2.0"
+version = System.getenv("VERSION") ?: "1.4.0"
 
 kotlin {
     androidTarget {
